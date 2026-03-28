@@ -125,59 +125,14 @@ This gives you `stage2/out/bin/fstar.exe` and `out -> stage2/out`.
 
 ## Using the Built Toolchain in a Project
 
-### Directory Layout Convention
+After building, the key entry points are:
+- `FStar/bin/fstar.exe` — F* compiler with Pulse plugin (symlink to `out/bin/fstar.exe`)
+- `FStar/karamel/krml` — KaRaMeL C extraction tool
 
-A typical project layout:
+The stage3 `fstar.exe` finds Pulse library modules automatically — no extra `--include`
+flags are needed for `Pulse.Lib.*`, `Pulse.Class.*`, etc.
 
-```
-myproject/
-├── tools/
-│   └── FStar/          # fstar2 checkout (gitignored)
-├── src/
-│   ├── spec/           # Pure specifications
-│   └── impl/           # Implementations (F* or Pulse)
-├── setup.sh            # Runs the build steps above
-├── Makefile            # Uses FSTAR_HOME=tools/FStar
-└── .gitignore          # Contains: tools/FStar
-```
-
-### Makefile Variables
-
-```makefile
-FSTAR_HOME ?= tools/FStar
-FSTAR_EXE  ?= $(FSTAR_HOME)/bin/fstar.exe
-KRML_HOME  ?= $(FSTAR_HOME)/karamel
-KRML_EXE   ?= $(KRML_HOME)/krml
-```
-
-The `bin/fstar.exe` symlink points to whichever stage was last built (`out/bin/fstar.exe`).
-
-### Include Paths for Pulse
-
-With fstar2 stage3, the Pulse library is installed into the F* lib tree. The stage3
-`fstar.exe` finds Pulse modules automatically — no extra `--include` flags are needed
-for standard Pulse library modules (`Pulse.Lib.*`, `Pulse.Class.*`, etc.).
-
-For verification, use `--already_cached` to skip re-checking the standard libraries:
-
-```makefile
-FSTAR_FLAGS = --cache_checked_modules \
-              --cache_dir _cache \
-              --odir _output \
-              --already_cached Prims,FStar,Pulse.Nolib,Pulse.Lib,Pulse.Class,PulseCore \
-              --include src/spec \
-              --include src/impl
-```
-
-### Shell Environment
-
-A minimal `env.sh` to put F* on PATH:
-
-```bash
-FSTAR_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/tools/FStar" && pwd)"
-export FSTAR_HOME
-export PATH="$FSTAR_HOME/out/bin:$PATH"
-```
+See the `projectsetup` skill for directory layout, Makefile template, and verification flags.
 
 ## Setup Script Template
 

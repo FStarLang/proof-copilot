@@ -149,77 +149,26 @@ update-snapshot: extract-c
 .PHONY: verify extract-krml extract-c test-extracted update-snapshot
 ```
 
-## Module Design Principles
+## Module Organization Principles
 
-### Spec Modules (Pure, not extracted to C)
+### Spec vs Implementation Separation
 
-Spec modules define the "what" — abstract types and reference implementations:
+- **`src/spec/`** — Pure specifications using unbounded types (`nat`, `Seq.seq`, `list`,
+  `option`). These define "what" the code should do. They are bundled away during C
+  extraction and produce no C output.
 
-```fstar
-module MyProject.Types
-
-// Free to use unbounded types
-type action_result = {
-  dest: option nat;
-  source: option nat;
-}
-
-// Pure spec function — the ground truth
-let compute_result (table: Seq.seq entry) (key: nat) : action_result = ...
-```
-
-These are bundled away in C extraction (`-bundle 'FStar.*,...,MyProject.Types'`).
-
-### Implementation Modules (Extracted to C)
-
-Impl modules define the "how" using machine-width types:
-
-```fstar
-module MyProject.Impl
-#lang-pulse
-open Pulse.Lib.Pervasives
-
-fn compute (table: array UInt64.t) (key: UInt64.t)
-  (#spec_table: Ghost.erased (Seq.seq entry))  // Ghost: proof only
-requires A.pts_to table spec_table
-returns r: UInt64.t
-ensures A.pts_to table spec_table **
-  pure (r == spec_to_low (Types.compute_result spec_table (UInt64.v key)))
-```
+- **`src/impl/`** — Verified implementations using machine-width types (`UInt64.t`,
+  `SizeT.t`, `bool`). These define "how" and are extracted to C.
 
 ### Interface Files (.fsti)
 
-Interfaces control what is visible to downstream modules and what appears in
-extracted C headers:
+Every implementation module that should be visible to other modules (or appear in
+the extracted C header) needs an `.fsti` file. Internal helpers in the `.fst` without
+`.fsti` declarations become `static` in extracted C.
 
-```fstar
-// Impl.fsti — only this is extracted
-module MyProject.Impl
-
-val compute (table: array UInt64.t) (key: UInt64.t)
-  (#spec_table: Ghost.erased (Seq.seq entry))
-  : stt UInt64.t
-    (requires A.pts_to table spec_table)
-    (ensures fun r -> A.pts_to table spec_table **
-      pure (r == expected_result spec_table key))
-```
-
-Internal helpers in the `.fst` without corresponding `.fsti` declarations
-become `static` in the extracted C.
-
-### Helper Modules
-
-Small utility functions used across modules:
-
-```fstar
-module MyProject.Helpers
-
-// inline_for_extraction: becomes inline in C callers
-inline_for_extraction
-let get_field (w: UInt64.t) (shift width: UInt32.t)
-  : Pure UInt64.t (requires UInt32.v shift + UInt32.v width <= 64) (ensures fun _ -> True)
-  = (w `U64.shift_right` shift) `U64.logand` (U64.sub (U64.shift_left 1UL width) 1UL)
-```
+For detailed guidance on writing extraction-ready code (machine-width types, ghost/erased
+parameters, `inline_for_extraction`, avoiding polymorphic stdlib), see the
+`krmlextraction` skill.
 
 ## OCaml Spec Testing
 
@@ -270,4 +219,4 @@ Update snapshot with `make update-snapshot` after any extraction change.
 
 - See `sourcebuild` skill for building the F*/Pulse/KaRaMeL toolchain
 - See `krmlextraction` skill for KaRaMeL bundle syntax and extraction details
-- See `fstarverifier` / `pulseverifier` skills for error interpretation
+- See `fstarverifier` skill for F*/Pulse error interpretation

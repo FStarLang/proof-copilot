@@ -38,7 +38,7 @@ fstar.exe Module.fst
 | `--z3refresh` | Restart Z3 between queries (detect flaky proofs) |
 | `--print_full_names` | Show fully qualified names (catch symbol confusion) |
 | `--print_implicits` | Show implicit arguments (debug unification) |
-| `--detail_errors` | More precise error locations |
+| `--detail_errors` | More precise error locations, but can take much longer |
 
 ```bash
 # Combined debugging

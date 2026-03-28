@@ -193,7 +193,7 @@ Either:
 krml \
   -tmpdir _extract \
   -skip-compilation \
-  -warn-error -2-9-11-15-17 \
+  -warn-error -2-9-17 \
   -bundle 'Api=Mod1,Mod2,...[rename=OutputName]' \
   -bundle 'FStar.*,Pulse.*,PulseCore.*,Prims' \
   -no-prefix Api.Module \
@@ -286,33 +286,10 @@ Warnings you should **not** suppress without investigation:
 If warnings 11 or 15 fire, the code likely needs restructuring: move the offending
 types/functions behind `Ghost.erased` or into spec-only modules that are bundled away.
 
-## Complete Extraction Workflow
+## Complete Makefile Template
 
-```makefile
-# 1. Verify all modules (creates .checked files in _cache/)
-verify: .depend
-	$(FSTAR) --dep full spec/*.fst pulse/*.fst > .depend
-	# check each file per dependency order
-
-# 2. Extract each module to .krml
-extract-krml: $(KRML_FILES) $(KRML_STDLIB_FILES)
-
-# 3. Translate .krml to C
-extract-c: extract-krml
-	$(KRML_EXE) \
-	  -tmpdir $(EXTRACT_DIR) \
-	  -skip-compilation \
-	  -warn-error -2-9-11-15-17 \
-	  -bundle 'Api=Impl,Support,...[rename=Output]' \
-	  -bundle 'FStar.*,Pulse.*,PulseCore.*,Prims,Spec.*' \
-	  -no-prefix Api \
-	  $(KRML_FILES) $(KRML_STDLIB_FILES)
-
-# 4. Build and test the extracted C
-test-extracted: extract-c
-	$(CC) -I$(KRML_HOME)/include -I$(KRML_HOME)/krmllib/dist/minimal \
-	  $(EXTRACT_DIR)/Output.c test_harness.c -o test && ./test
-```
+For a full working Makefile that integrates verification, extraction, testing, and
+snapshot management, see the `projectsetup` skill.
 
 ## Debugging Extraction Issues
 
