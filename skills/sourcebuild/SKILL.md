@@ -258,3 +258,51 @@ git checkout pulse/build/ocaml/
 - [F* tutorial](https://fstar-lang.org/tutorial/)
 - [Pulse documentation](https://github.com/FStarLang/FStar/tree/fstar2/pulse)
 - See the `krmlextraction` skill for extracting verified code to C
+- See the `fstarmcp` skill for incremental typechecking via the MCP server
+
+## Building the F* MCP Server
+
+The F* MCP server enables incremental typechecking (see the `fstarmcp` skill).
+It is a Rust project that requires `cargo` (the Rust build tool).
+
+### Prerequisites
+
+Install Rust via [rustup](https://rustup.rs/) if not already installed:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+### Clone and Build
+
+```bash
+# Clone alongside the FStar repo
+git clone https://github.com/FStarLang/fstar-mcp.git
+cd fstar-mcp
+
+# Build (release mode)
+cargo build --release
+```
+
+The binary is at `fstar-mcp/target/release/fstar-mcp`.
+
+### Add to Setup Script
+
+Extend the setup script template above with:
+
+```bash
+# --- F* MCP Server ---
+FSTARMCP_REPO="https://github.com/FStarLang/fstar-mcp.git"
+FSTARMCP_HOME="$SCRIPT_DIR/tools/fstar-mcp"
+
+if [ -d "$FSTARMCP_HOME/.git" ]; then
+    git -C "$FSTARMCP_HOME" pull --ff-only
+else
+    git clone "$FSTARMCP_REPO" "$FSTARMCP_HOME"
+fi
+
+cd "$FSTARMCP_HOME"
+cargo build --release
+echo "fstar-mcp ready: $FSTARMCP_HOME/target/release/fstar-mcp"
+```

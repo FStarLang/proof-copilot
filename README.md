@@ -18,6 +18,7 @@ A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-cop
 | **proofdebugging** | Systematic workflows for debugging F*/Pulse verification failures — isolating failures, factoring lemmas, and hardening proofs. |
 | **fstarverifier** | Verify F* and Pulse code with `fstar.exe` and interpret common error patterns. |
 | **specreview** | Review F*/Pulse specifications for completeness, strength, and usability — catch weak postconditions and missing spec-impl connections. |
+| **fstarmcp** | Use the F* MCP server for interactive, incremental typechecking — create a session once, then re-typecheck modified code without restarting F*. |
 | **projectsetup** | Structure a new F*/Pulse verification project with Makefile and directory layout. |
 | **sourcebuild** | Build F*, Pulse, and KaRaMeL from source (fstar2 branch). |
 | **krmlextraction** | Extract verified F*/Pulse code to C via KaRaMeL. |
@@ -71,7 +72,7 @@ Use the proofdebugging skill to isolate this verification failure
 ## Roadmap
 
 Future versions will add:
-- **fstarmcp** skill with MCP server integration for incremental typechecking
+- **pulseverifier** skill for Pulse-specific verification workflows
 
 ## License
 
