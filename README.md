@@ -25,9 +25,10 @@ A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-cop
 
 ## Prerequisites
 
-- **F\*** — Install from [fstar-lang.org](https://fstar-lang.org) or build from source. `fstar.exe` must be available on your PATH or configured via `FStar.fst.config.json` in your project.
-- **Z3** — The SMT solver used by F*. Typically installed alongside F*.
 - **GitHub Copilot CLI** — Install from [github.com/github/copilot-cli](https://github.com/github/copilot-cli).
+- **F\*** — The agent can build F* from source using the `sourcebuild` skill (requires `git`, `opam`/OCaml ≥ 4.14, and `Z3`). Alternatively, install a pre-built release from [fstar-lang.org](https://fstar-lang.org). Either way, `fstar.exe` must be on your PATH or configured via `FStar.fst.config.json`.
+- **Z3** — The SMT solver used by F*. The `sourcebuild` skill can install the required versions automatically, or install alongside F* from a release.
+- **Rust/Cargo** (optional) — Required only for building the F* MCP server for incremental typechecking. See the `sourcebuild` and `fstarmcp` skills.
 
 ## Installation
 
