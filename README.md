@@ -1,4 +1,4 @@
-# fstar-copilot
+# F* Proof Copilot
 
 A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli) plugin for [F*](https://fstar-lang.org) proof-oriented programming.
 
@@ -32,7 +32,7 @@ A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-cop
 ## Installation
 
 ```bash
-copilot plugin install FStarLang/fstar-copilot
+copilot plugin install FStarLang/proof-copilot
 ```
 
 ## Usage
