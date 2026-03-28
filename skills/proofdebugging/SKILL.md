@@ -147,6 +147,43 @@ assert (x < 200);      // Now provable
 3. Use `#push-options` / `#pop-options` to scope rlimit changes
 4. Make definitions `[@@"opaque_to_smt"]` when not needed by nearby proofs
 
+### Using assert_spinoff for Query Isolation
+
+`assert_spinoff (P)` creates a separate Z3 query for P, preventing it from
+bloating the main proof context. Use when:
+- A function has many assertions and Z3 is slow on all of them
+- You want to prove a property without polluting the main query context
+- Individual assertions are fast but the combined query times out
+
+```fstar
+let complex_proof () : Lemma (...) =
+  step1;
+  assert_spinoff (intermediate_fact1);  // Proven in isolation
+  assert_spinoff (intermediate_fact2);  // Proven in isolation
+  // Main proof continues with both facts available but Z3 didn't have
+  // to carry the burden of proving them while also proving the rest
+  final_step
+```
+
+### Predicate Abstraction
+
+When you have large, repeated predicate expressions copied across multiple
+functions or assertions:
+
+1. Extract into a named predicate: `let my_pred x y = ...`
+2. Write pure lemmas relating predicates to each other
+3. Use fold/unfold (in Pulse) to control when Z3 sees internals
+4. This dramatically reduces proof complexity and Z3 work
+
+```fstar
+// BAD: large inline predicate repeated in 5 places
+ensures (forall i. 0 <= i /\ i < length arr ==> index arr i >= 0 /\ index arr i < bound /\ ...)
+
+// GOOD: named predicate with a lemma
+let all_in_bounds (arr: seq int) (bound: int) = forall i. 0 <= i /\ i < length arr ==> ...
+val all_in_bounds_preserved : arr:_ -> bound:_ -> i:_ -> Lemma (...)
+```
+
 ### Wrong Symbol (Copy-Paste Bug)
 
 **Symptom:** Proof fails inexplicably; the code "looks right."
@@ -189,6 +226,11 @@ another module may reference the wrong qualified name.
 2. Use `--print_full_names` to verify the lemma resolves to the right definition
 3. Check that value-level equalities match what the lemma expects
    (e.g., `U64.v x = U64.v y` vs `x == y`)
+4. Try calling the lemma outside the current conditional/loop scope — Pulse scoping
+   can affect what facts Z3 has available
+5. Factor the lemma call into a separate pure F* helper function and call that
+   from Pulse — this isolates whether the issue is in Pulse's VC generation or
+   in the lemma itself
 
 ## Anti-Patterns
 

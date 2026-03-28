@@ -131,6 +131,17 @@ grep -rn 'inline_for_extraction' ulib/ --include='*.fsti' | head -20
 - Unification failures: Add explicit type annotations
 - "Ill-typed term" in Pulse: Check ghost vs concrete contexts
 
+### Specification Completeness Checklist
+
+Before considering a proof done, verify:
+- Does the postcondition prove FUNCTIONAL CORRECTNESS (not just type safety)?
+- Does the postcondition connect the imperative result to the pure spec?
+- Can a caller actually USE the postcondition to reason about the result?
+- Are the postconditions exposed in the .fsti interface?
+- For algorithms: does the postcondition prove the output matches the
+  algorithm's mathematical specification (e.g., "computes the MST", not just
+  "returns a forest")?
+
 ## Module Organization
 
 ### Spec vs Implementation Separation
@@ -165,6 +176,14 @@ fstar.exe Module.fst
 # fstar.exe Module.fsti Module.fst  # WRONG
 ```
 
+### Spec-Impl Connection
+
+- Every Impl function's postcondition must reference the corresponding Spec function
+- The .fsti interface must expose the connection to Spec
+- Callers should be able to reason using Spec types, not Impl internals
+- Correctness theorems (e.g., a max-flow/min-cut theorem) belong in a Lemmas module
+  that bridges Spec and Impl, not intermingled with either
+
 ## F* Patterns
 
 ### Lemma Structure
@@ -189,6 +208,53 @@ let my_fact = ...
 let use_my_fact (x:t) : Lemma (my_fact_at x) =
   reveal_opaque (`%my_fact) my_fact
 ```
+
+#### Advanced Quantifier Techniques
+```fstar
+// Use introduce forall/exists sugar (see ClassicalSugar.fst)
+introduce forall (x:t). P x
+with x. proof_of_P_x;
+
+introduce exists (x:t). P x
+with witness_value and proof_of_P_witness;
+
+// When Z3 fails long quantifier chains, qi.eager_threshold may be too low.
+// Default is 10. If no instantiation loops exist, try higher:
+// --z3smtopt '(set-option :smt.qi.eager_threshold 100)'
+```
+
+### Non-Linear Arithmetic in Z3
+
+When proofs involve multiplication, modular arithmetic, or division:
+- Disable NL arithmetic: `--z3smtopt '(set-option :smt.arith.nl false)'`
+- Handle all NL steps explicitly with `FStar.Math.Lemmas`
+- Use calc-style proofs for multi-step arithmetic reasoning:
+
+```fstar
+calc (==) {
+  a * (b + c);
+  == { FStar.Math.Lemmas.distributivity_add_right a b c }
+  a * b + a * c;
+}
+```
+
+### Hiding Constants Behind Interfaces
+
+For special values (e.g., infinity in graph algorithms):
+- Do NOT expose concrete values (e.g., `let inf = 1000000`)
+- Isolate the definition in a module and hide it behind an interface:
+
+```fstar
+// Weight.fsti
+val inf : nat
+val inf_is_max : x:nat -> Lemma (x <= inf)
+
+// Weight.fst
+let inf = max_int
+let inf_is_max x = ()
+```
+
+This prevents Z3 from unfolding the definition and makes proofs modular.
 
 ### Extensional Equality
 ```fstar
@@ -276,6 +342,28 @@ let concrete_val = arr.(idx);  // Good: reads from actual array
 // let ghost_val = Seq.index ghost_seq idx;  // Ghost only!
 ```
 
+### Scoping of `pure` Clauses
+
+`pure` clauses in `requires` do NOT scope over `returns` or `ensures`
+(they ARE in scope for the function body). To bind a precondition value
+for use in postconditions, read it in the body and return or ghost-return it:
+
+```pulse
+fn increment (x: ref int)
+  (#v: erased int)
+requires R.pts_to x v ** pure (reveal v >= 0)
+returns r: int
+ensures R.pts_to x (reveal v + 1) ** pure (r == reveal v)
+{
+  let old = !x;
+  x := old + 1;
+  old
+}
+```
+
+To scope a precondition over the postcondition, pass it as a ghost parameter
+or use the `with_pure` combinator in Pulse.Lib.Pervasives.
+
 ### Predicate fold/unfold
 ```pulse
 unfold (my_predicate args);  // Expose internals
@@ -293,6 +381,32 @@ FS.all_finite_set_facts_lemma();
 // Then SMT can reason about cardinality, membership, etc.
 assert (pure (FS.cardinality (FS.remove x s) == FS.cardinality s - 1));
 ```
+
+### Stack vs Heap Allocation
+
+```pulse
+// STACK allocation: use let mut (automatically freed at scope exit)
+let mut x = 0;                    // stack reference
+let mut arr = [| 0; 24sz |];      // stack array, initialized to 0 (constant size 24)
+
+// HEAP allocation: use Box (single values) and Vec (dynamic arrays)
+let b = B.alloc init_val;         // heap box, needs B.free
+let v = Vec.alloc init_val len;   // heap vec, needs Vec.free
+// ...
+B.free b;
+Vec.free v;
+```
+
+Do NOT use `Ref.alloc`/`Array.alloc` for stack allocation — use `let mut`.
+Use `Array` only for stack-allocated constant-size arrays.
+Use `Box` and `Vec` for heap-allocated data.
+
+### BoundedIntegers Consistency
+
+`Pulse.Lib.BoundedIntegers` redefines common operations like `<=`, `<`, `+`, etc.
+If you use this library, use it UNIFORMLY in both spec and implementation.
+Mixing BoundedIntegers operators with standard operators causes mysterious
+type mismatches that Z3 cannot resolve.
 
 ### Machine Integer Bounds
 ```pulse
@@ -353,7 +467,15 @@ Factor the failing part into a helper lemma in a separate (possibly non-Pulse) m
   the lemma itself works. If it works there, the issue is in how you're
   calling it, not in Pulse.
 
-### Rlimit Management
+### CRITICAL: Never Escalate rlimit as First Response
+
+When a proof fails or times out:
+1. FIRST: Use `--query_stats --split_queries always` to find the failing query
+2. SECOND: Factor into smaller lemmas, add intermediate assertions
+3. THIRD: Use the smtprofiling skill to diagnose quantifier cascades
+4. FOURTH: Try `--fuel 0 --ifuel 0` with explicit lemma calls
+5. LAST RESORT: Increase rlimit only after all above fail, and only minimally
+
 ```fstar
 // Target: rlimit ≤ 10 everywhere
 // If a proof needs high rlimit, refactor:
@@ -362,6 +484,7 @@ Factor the failing part into a helper lemma in a separate (possibly non-Pulse) m
 // 3. Reduce fuel: --fuel 0 --ifuel 0
 // 4. Add explicit type annotations
 // 5. Use {:pattern ...} on quantifiers
+// 6. For NL arithmetic: disable smt.arith.nl and use calc proofs
 ```
 
 ### Diagnosing with query_stats
@@ -375,8 +498,11 @@ fstar.exe --query_stats --split_queries always Module.fst 2>&1 | grep -E 'cancel
    cause is a bug in your code, not a limitation of F*/Pulse. Produce a small standalone
    example before claiming a tool limitation.
 
-2. **Copy-paste is a source of bugs.** When duplicating code between modules, use
-   `--print_full_names` to verify symbols resolve to the intended definitions.
+2. **Copy-paste is a major source of proof failures.** When duplicating code between
+   modules, ALWAYS use `--print_full_names --print_implicits` to verify symbols resolve
+   to the intended definitions. A function from the wrong module may have similar but
+   subtly different types, causing Z3 to fail silently. Never blame a proof failure on
+   tool limitations before checking for copy-paste symbol confusion.
 
 3. **Large files make Z3 slow.** Split big modules — e.g., separate search functions
    from core implementation — for faster iteration and more reliable proofs.
