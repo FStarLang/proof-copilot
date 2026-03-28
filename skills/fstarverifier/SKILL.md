@@ -1,14 +1,15 @@
 ---
 name: fstarverifier
-description: Verify F* code with fstar.exe and interpret errors
+description: Verify F* and Pulse code with fstar.exe and interpret errors
 ---
 
 ## Invocation
 
 This skill is used when:
-- Verifying F* (.fst) or interface (.fsti) files
-- Interpreting F* error messages
-- Debugging verification failures
+- Verifying F* (.fst) or Pulse (`#lang-pulse`) files
+- Interpreting F* or Pulse error messages
+- Debugging verification or separation logic failures
+- Managing Pulse resources (fold/unfold, permissions, memory)
 
 ## Verification Commands
 
@@ -64,6 +65,7 @@ fstar.exe --query_stats --split_queries always --z3refresh Module.fst
 3. Use `Seq.equal` / `Set.equal` for collection equality (not `==`)
 4. Call `FS.all_finite_set_facts_lemma()` before FiniteSet reasoning
 5. Check that the right definitions are in scope (`--print_full_names`)
+6. For Pulse: check fold/unfold balance — every `unfold` needs a matching `fold`
 
 ### "Identifier not found: X"
 
@@ -97,23 +99,14 @@ fstar.exe --query_stats --split_queries always --z3refresh Module.fst
 2. Check refinement predicates match
 3. For machine integers, ensure bounds are established
 
-### "Subtyping check failed"
+### "Subtyping check failed" / "Not a subtype of the expected type"
 
 **Cause:** Cannot prove a refinement type's predicate.
 
 **Solutions:**
-1. Add an `assert` establishing the predicate just before the problematic expression
+1. Add an `assert` establishing the predicate just before the expression
 2. Call a lemma that establishes the needed fact
-3. Check that arithmetic bounds are in scope
-
-### "Not a subtype of the expected type"
-
-**Cause:** Return value doesn't match declared return type refinement.
-
-**Solutions:**
-1. Add assertions establishing the ensures clause
-2. Check all branches of match/if return the correct type
-3. For Lemma types, ensure the postcondition is provable
+3. Check all branches of match/if return the correct type
 
 ### "Patterns are incomplete"
 
@@ -121,8 +114,141 @@ fstar.exe --query_stats --split_queries always --z3refresh Module.fst
 
 **Solutions:**
 1. Add missing cases
-2. If intentional, add a wildcard `| _ -> ...` with the right type
-3. Suppress with `--warn_error -321` only if you've verified completeness
+2. If intentional, add a wildcard `| _ -> ...`
+3. Suppress with `--warn_error -321` only if completeness is verified
+
+## Pulse-Specific Errors
+
+### "Application of stateful computation cannot have ghost effect"
+
+**Cause:** Calling a stateful (`stt`) function inside a ghost context.
+
+**How this happens:**
+- Variables bound with `with x y. _` are ghost
+- If an `if` condition depends on ghost values, both branches become ghost
+- Stateful operations (read, write, array access) cannot be ghost
+
+**Solutions:**
+1. Read from actual data structures, not ghost witnesses:
+```pulse
+// WRONG: ghost_seq is ghost from 'with'
+let val = Seq.index ghost_seq idx;
+let data = !some_ref;  // Error: ghost context
+
+// RIGHT: Read from the actual array
+let val = arr.(idx);   // Concrete
+```
+2. Perform stateful work before entering ghost conditionals
+3. Restructure to separate the stateful read from the ghost reasoning
+
+### "Expected a term with non-informative (erased) type"
+
+**Cause:** Trying to bind a concrete type from a ghost expression.
+
+**Solutions:**
+1. Keep ghost values ghost: `let x : erased (list entry) = ...`
+2. Use assertions instead of bindings: `assert (pure (Cons? ghost_list))`
+3. Read concrete data from actual data structures, not ghost state
+
+### "Ill-typed application" in fold/unfold
+
+**Cause:** Predicate arguments don't match the definition.
+
+**Solutions:**
+1. Check all arguments match the predicate signature
+2. Add explicit type annotations to implicit arguments
+3. Verify the predicate definition hasn't changed
+
+### "Cannot prove pure fact"
+
+**Cause:** A `pure (...)` assertion in the slprop cannot be established.
+
+**Solutions:**
+1. Add intermediate `assert (pure (...))` steps
+2. Call F* lemmas to establish the needed fact
+3. Check arithmetic bounds and machine integer properties
+
+## Pulse Resource Management
+
+### Fold/Unfold Balance
+
+Every predicate manipulation must be balanced:
+
+```pulse
+unfold (is_valid table spec);
+// ... work with exposed resources ...
+fold (is_valid table spec);
+```
+
+For range predicates, use get/put helpers:
+```pulse
+get_at ptrs contents lo hi idx;   // Extract element from range
+// ... work with element ...
+put_at ptrs contents lo hi idx;   // Restore range
+```
+
+### Memory Safety Rules
+
+- **Never `drop_` non-empty resources** — this is a memory leak
+- **Acceptable drops**: Empty/null/ghost resources only
+  ```pulse
+  drop_ (LL.is_list null_ptr []);  // OK: empty list is null
+  // drop_ (LL.is_list ptr (hd::tl));  // WRONG: memory leak!
+  ```
+- **Box allocations** need `B.free`: `let b = B.alloc v; ... B.free b`
+- **Array resources** must be returned or freed
+
+### Permissions
+
+```pulse
+arr |-> contents            // Full permission: read and write
+A.pts_to arr #p contents   // Fractional: read-only (p is a fraction)
+```
+
+## Common Proof Patterns
+
+### FiniteSet Reasoning
+```fstar
+// MUST call before FiniteSet assertions
+FS.all_finite_set_facts_lemma();
+assert (FS.cardinality (FS.remove x s) == FS.cardinality s - 1);
+```
+
+### Extensional Equality
+```fstar
+assert (Seq.equal s1 s2);  // NOT: s1 == s2
+assert (Set.equal set1 set2);
+```
+
+### Machine Integer Bounds (Pulse)
+```pulse
+assert (pure (SZ.v idx < len));
+assert (pure (len <= SZ.v capacity));
+assert (pure (SZ.fits (SZ.v capacity)));
+assert (pure (SZ.fits (SZ.v idx + 1)));
+let next = idx `SZ.add` 1sz;
+```
+
+### Calling F* Lemmas from Pulse
+```pulse
+my_arithmetic_lemma arg1 arg2;  // Ghost: costs nothing at runtime
+assert (pure (conclusion_of_lemma));
+```
+
+### Loop Invariants (Pulse)
+```pulse
+while (!i <^ len)
+invariant exists* vi v_acc.
+  R.pts_to i vi **
+  R.pts_to acc v_acc **
+  A.pts_to arr #p s **
+  pure (SZ.v vi <= Seq.length s /\ v_acc == partial_result s (SZ.v vi))
+{
+  // loop body
+}
+```
+
+**Do NOT use `invariant b. exists* ...`** style.
 
 ## Verification Strategy
 
@@ -143,12 +269,21 @@ fstar.exe --query_stats --split_queries always --z3refresh Module.fst
 ### For Flaky Proofs
 1. Run with `--z3refresh` to detect order-dependent proofs
 2. Reduce rlimit to 10 — if it fails, the proof needs work
-3. Avoid relying on Z3's internal heuristic ordering
-4. Add explicit intermediate assertions to guide Z3
+3. Add explicit intermediate assertions to guide Z3
+
+## Verification Checklist
+
+- [ ] No `admit()` or `assume_` calls
+- [ ] No `drop_` of non-empty resources (Pulse)
+- [ ] Interface (.fsti) verified before implementation (.fst)
+- [ ] All fold/unfold balanced (Pulse)
+- [ ] rlimits ≤ 10 throughout
+- [ ] `--query_stats` shows no cancelled queries
 
 ## Additional Resources
 
-- [Proof-oriented Programming in F*](https://github.com/FStarLang/PoP-in-FStar) — book with patterns and explanations
-- `FSTAR_HOME/ulib/` — standard library sources
-- `FSTAR_HOME/tests/` — test suite with small verification examples
+- [Proof-oriented Programming in F*](https://github.com/FStarLang/PoP-in-FStar)
+- `FSTAR_HOME/ulib/` — F* standard library sources
+- `FSTAR_HOME/pulse/test/` — Pulse test cases and examples
+- `FSTAR_HOME/pulse/lib/pulse/lib/` — Pulse library sources
 - See the `proofdebugging` skill for systematic debugging workflows
