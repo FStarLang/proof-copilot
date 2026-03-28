@@ -72,7 +72,9 @@ Use the proofdebugging skill to isolate this verification failure
 ## Roadmap
 
 Future versions will add:
-- **pulseverifier** skill for Pulse-specific verification workflows
+- smart context retrieval with vector embeddings
+- enhanced spec review with provable tests
+- support for other F*-related tools, EverParse, Kuiper, etc.
 
 ## License
 
