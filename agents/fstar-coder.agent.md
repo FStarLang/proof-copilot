@@ -41,6 +41,50 @@ fstar.exe --print_full_names --print_implicits Module.fst
 Pulse files use `#lang-pulse` at the top and `open Pulse.Lib.Pervasives`.
 The stage3 `fstar.exe` handles `#lang-pulse` natively — no `--ext pulse` needed.
 
+## Searching the Library and Examples
+
+Before writing code from scratch, search the F* and Pulse sources for reusable patterns,
+library functions, and examples of similar problems.
+
+### Key Source Locations (relative to FSTAR_HOME)
+
+| Path | Contents |
+|------|----------|
+| `ulib/` | F* standard library sources (FStar.Seq, FStar.UInt64, etc.) |
+| `pulse/lib/pulse/lib/` | Pulse library (Pulse.Lib.Array, Pulse.Lib.Reference, etc.) |
+| `pulse/lib/pulse/core/` | PulseCore (low-level separation logic primitives) |
+| `pulse/test/` | Pulse test cases and examples |
+| `tests/` | F* test suite (many small verification examples) |
+
+### How to Search
+
+```bash
+# Find a function or type definition
+grep -rn 'val my_function\|let my_function' ulib/ pulse/lib/
+
+# Find usage examples of a library function
+grep -rn 'Array.pts_to\|A.pts_to' pulse/test/ --include='*.fst'
+
+# Find Pulse examples with loops
+grep -rn 'while\|invariant' pulse/test/ --include='*.fst'
+
+# Find how a specific pattern is used (e.g., fold/unfold)
+grep -rn 'fold.*on_range\|unfold.*on_range' pulse/ --include='*.fst'
+
+# Search for extraction-related patterns
+grep -rn 'inline_for_extraction' ulib/ --include='*.fsti' | head -20
+```
+
+### When to Search
+
+- **Before defining a type**: Check if F* ulib already has it (e.g., `FStar.Option`,
+  `FStar.Either`, `FStar.Seq.Properties`)
+- **Before writing a lemma**: Search ulib for existing proofs (e.g., `FStar.Math.Lemmas`,
+  `FStar.Seq.Properties`, `FStar.BitVector`)
+- **When stuck on a Pulse pattern**: Look at `pulse/test/` for working examples of
+  similar code (arrays, references, loops, locks)
+- **For extraction patterns**: Check `pulse/test/` for `--codegen krml` examples
+
 ## Core Competencies
 
 ### 1. Specification Design
@@ -299,15 +343,15 @@ Factor the failing part into a helper lemma in a separate (possibly non-Pulse) m
 - You're inside a ghost context (e.g., conditional on ghost value)
 - Read from actual data structures, not ghost witnesses
 
-**Option match in Pulse generates incomplete Z3 quantifiers**
-- `match` on `option` types in Pulse can produce quantified Z3 assertions that
-  Z3 cannot instantiate. Extract the reasoning into a pure F* lemma in a
-  separate module and call it from Pulse.
-
-**Symbol confusion across modules**
+**Mysterious proof failures in Pulse**
+- Before assuming a tool limitation, check for mundane bugs first:
+  copy-paste errors, wrong module qualifiers, mismatched symbols.
 - Use `--print_full_names --print_implicits` to verify you're referencing the
-  correct definition. Copy-paste errors across modules are a common source of
-  mysterious proof failures.
+  correct definition. A function from the wrong module may have similar but
+  subtly different types, causing Z3 to fail silently.
+- If a lemma call fails in Pulse, try calling it in a pure F* test to confirm
+  the lemma itself works. If it works there, the issue is in how you're
+  calling it, not in Pulse.
 
 ### Rlimit Management
 ```fstar
