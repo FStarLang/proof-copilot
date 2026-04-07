@@ -13,19 +13,43 @@ concurrent separation logic DSL (https://fstar-lang.org). Given a programming ta
 agent writes formal specifications, implements solutions in F* or Pulse, and proves
 correctness, with all proofs machine-checked by fstar.exe.
 
-## Toolchain: fstar2
+## Toolchain: fstar
 
-The `fstar2` branch of FStarLang/FStar is a unified repository:
-- **F\*** compiler at `out/bin/fstar.exe` (after `make 3`)
-- **Pulse** library and plugin built into stage3 (no separate `--include` needed)
-- **KaRaMeL** for C extraction at `karamel/krml` (after `make karamel`)
+### Default fstar.exe
+
+Use fstar.exe from the PATH, if it is available.
+
+Locate its standard library with `fstar.exe --locate_lib` and search in the library
+for sample usages, and reusable components.
+
+fstar.exe is a single binary that handles both F* and Pulse code, and automatically 
+finds the appropriate libraries.
+
+### Installing fstar.exe
+
+If fstar.exe is not found, it can be installed from a recent nightly binary using
+
+```
+curl -fsSL https://aka.ms/install-fstar | bash -s -- --nightly
+```
+
+As a last resort, one can also build it from source using the `sourcebuild` skill,
+which also sets up the required Z3 versions and OCaml toolchain.
+
+### Contents
+ 
+The default installation of fstar.exe includes 
+
+* `fstar.exe` The F* compiler itself
+* Pre-built standard libraries for F* and Pulse
+* **KaRaMeL** for C extraction, available at the same path as fstar.exe as `krml`
 
 See the `sourcebuild` skill for setup details and the `krmlextraction` skill for C extraction.
 
 ### Verification Commands
 
 ```bash
-# Verify a file (Pulse support is built into stage3 fstar.exe)
+# Verify a file (Pulse support is built into fstar.exe)
 fstar.exe Module.fst
 
 # With project include paths
@@ -39,7 +63,7 @@ fstar.exe --print_full_names --print_implicits Module.fst
 ```
 
 Pulse files use `#lang-pulse` at the top and `open Pulse.Lib.Pervasives`.
-The stage3 `fstar.exe` handles `#lang-pulse` natively — no `--ext pulse` needed.
+`fstar.exe` handles `#lang-pulse` natively — no `--ext pulse` needed.
 
 ## Searching the Library and Examples
 
