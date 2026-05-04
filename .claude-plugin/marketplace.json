@@ -1,10 +1,18 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "proof-copilot",
+  "version": "0.0.6",
+  "description": "F* proof-oriented programming agent and verification skills for Claude Code",
+  "owner": {
+    "name": "FStarLang",
+    "email": "nikswamy@microsoft.com"
+  },
   "plugins": [
     {
       "name": "proof-copilot",
       "description": "F* proof-oriented programming agent and verification skills for Claude Code",
-      "path": "claude-code-plugin"
+      "source": "../claude-code-plugin",
+      "category": "development"
     }
   ]
 }
