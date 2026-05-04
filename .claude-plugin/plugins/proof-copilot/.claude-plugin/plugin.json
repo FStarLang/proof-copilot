@@ -7,5 +7,5 @@
   "keywords": ["fstar", "verification", "proof", "formal-methods"],
   "repository": "https://github.com/FStarLang/proof-copilot",
   "agents": "../agents/",
-  "skills": "../../skills/"
+  "skills": "../../../../skills/"
 }
