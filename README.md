@@ -1,6 +1,9 @@
 # F* Proof Copilot
 
-A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli) plugin for [F*](https://fstar-lang.org) proof-oriented programming.
+Plugins for [F*](https://fstar-lang.org) proof-oriented programming, available for both [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli) and [Claude Code](https://claude.ai/code).
+
+- **Copilot CLI plugin** — root of this repo (`plugin.json`, `agents/`, `skills/`)
+- **Claude Code plugin** — [`claude-code-plugin/`](claude-code-plugin/) (`.claude-plugin/`, `agents/`, `skills/`)
 
 ## What's Included
 
@@ -25,20 +28,33 @@ A [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-cop
 
 ## Prerequisites
 
-- **GitHub Copilot CLI** — Install from [github.com/github/copilot-cli](https://github.com/github/copilot-cli).
 - **F\*** — The agent can build F* from source using the `sourcebuild` skill (requires `git`, `opam`/OCaml ≥ 4.14, and `Z3`). Alternatively, install a pre-built release from [fstar-lang.org](https://fstar-lang.org). Either way, `fstar.exe` must be on your PATH or configured via `FStar.fst.config.json`.
 - **Z3** — The SMT solver used by F*. The `sourcebuild` skill can install the required versions automatically, or install alongside F* from a release.
 - **Rust/Cargo** (optional) — Required only for building the F* MCP server for incremental typechecking. See the `sourcebuild` and `fstarmcp` skills.
 
 ## Installation
 
+### GitHub Copilot CLI
+
+Requires [GitHub Copilot CLI](https://github.com/github/copilot-cli).
+
 ```bash
 copilot plugin install FStarLang/proof-copilot
 ```
 
+### Claude Code
+
+Requires [Claude Code](https://claude.ai/code).
+
+```bash
+claude plugin install FStarLang/proof-copilot/claude-code-plugin
+```
+
 ## Usage
 
-### Using the FStarCoder agent
+### GitHub Copilot CLI
+
+#### Using the FStarCoder agent
 
 You can invoke the agent in several ways:
 
@@ -54,9 +70,33 @@ You can invoke the agent in several ways:
    copilot --agent=fstar-coder --prompt "Implement a verified binary search over a sorted sequence"
    ```
 
-### Using skills
+#### Using skills
 
 Skills are automatically invoked when relevant, or can be called directly:
+
+```
+Use the smtprofiling skill to diagnose why this proof is slow
+```
+
+```
+Use the specreview skill to check if my postconditions are strong enough
+```
+
+```
+Use the proofdebugging skill to isolate this verification failure
+```
+
+### Claude Code
+
+#### Using the FStarCoder agent
+
+```
+Use the fstar-coder agent to implement a verified binary search over a sorted sequence
+```
+
+#### Using skills
+
+Skills are invoked automatically when relevant, or explicitly:
 
 ```
 Use the smtprofiling skill to diagnose why this proof is slow

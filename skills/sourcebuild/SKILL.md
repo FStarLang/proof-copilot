@@ -1,6 +1,7 @@
 ---
 name: sourcebuild
 description: Build F*, Pulse, and KaRaMeL from source (fstar2 branch) for use in a verification project
+tools: Bash, Read
 ---
 
 ## Invocation

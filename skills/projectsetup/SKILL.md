@@ -1,6 +1,7 @@
 ---
 name: projectsetup
 description: Structure a new F*/Pulse verification project with Makefile and directory layout
+tools: Bash, Read, Write, Edit
 ---
 
 ## Invocation

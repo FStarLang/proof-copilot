@@ -1,6 +1,7 @@
 ---
 name: proofdebugging
 description: Systematic workflows for debugging F*/Pulse verification failures
+tools: Bash, Read
 ---
 
 ## Invocation

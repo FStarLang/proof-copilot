@@ -1,6 +1,7 @@
 ---
 name: fstarverifier
 description: Verify F* and Pulse code with fstar.exe and interpret errors
+tools: Bash, Read
 ---
 
 ## Invocation

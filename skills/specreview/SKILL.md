@@ -1,6 +1,7 @@
 ---
 name: specreview
 description: Review F*/Pulse specifications for completeness, strength, and usability
+tools: Read, Bash, Grep
 ---
 
 ## Invocation

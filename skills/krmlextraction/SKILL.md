@@ -1,6 +1,7 @@
 ---
 name: krmlextraction
 description: Extract verified F*/Pulse code to C via KaRaMeL (.krml intermediate representation)
+tools: Bash, Read
 ---
 
 ## Invocation

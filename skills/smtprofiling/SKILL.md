@@ -1,6 +1,7 @@
 ---
 name: smtprofiling
 description: Debug F* queries sent to Z3, diagnosing proof instability and performance issues
+tools: Bash, Read
 ---
 
 ## Invocation

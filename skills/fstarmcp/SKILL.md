@@ -1,6 +1,7 @@
 ---
 name: fstarmcp
 description: Use the F* MCP server for interactive, incremental typechecking of F* and Pulse code
+tools: Bash, Read
 ---
 
 ## Overview
@@ -15,6 +16,26 @@ Source: [FStarLang/fstar-mcp](https://github.com/FStarLang/fstar-mcp)
 See the `sourcebuild` skill for instructions on building `fstar-mcp` from source.
 
 ## MCP Registration
+
+### Claude Code
+
+Register the server in `.mcp.json` at your project root:
+
+```json
+{
+  "mcpServers": {
+    "fstar-mcp": {
+      "type": "http",
+      "url": "http://localhost:3001/"
+    }
+  }
+}
+```
+
+Claude Code auto-connects when the server is running. Restart Claude Code after
+adding the configuration so the new MCP server is discovered.
+
+### GitHub Copilot CLI
 
 Register the server in `.copilot/mcp-config.json` at your project root:
 
