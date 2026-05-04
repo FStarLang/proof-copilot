@@ -1,0 +1,10 @@
+{
+  "name": "proof-copilot",
+  "plugins": [
+    {
+      "name": "proof-copilot",
+      "description": "F* proof-oriented programming agent and verification skills for Claude Code",
+      "path": "claude-code-plugin"
+    }
+  ]
+}

@@ -46,8 +46,9 @@ copilot plugin install FStarLang/proof-copilot
 
 Requires [Claude Code](https://claude.ai/code).
 
-```bash
-claude plugin install FStarLang/proof-copilot/claude-code-plugin
+```
+/plugin marketplace add FStarLang/proof-copilot
+/plugin install proof-copilot@proof-copilot
 ```
 
 ## Usage
