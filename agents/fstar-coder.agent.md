@@ -15,99 +15,22 @@ correctness, with all proofs machine-checked by fstar.exe.
 
 ## Toolchain: fstar
 
-### Default fstar.exe
+Use `fstar.exe` from PATH. Locate the standard library with `fstar.exe --locate_lib`.
+If not available, install from a nightly binary:
 
-Use fstar.exe from the PATH, if it is available.
-
-Locate its standard library with `fstar.exe --locate_lib` and search in the library
-for sample usages, and reusable components.
-
-fstar.exe is a single binary that handles both F* and Pulse code, and automatically 
-finds the appropriate libraries.
-
-### Installing fstar.exe
-
-If fstar.exe is not found, it can be installed from a recent nightly binary using
-
-```
+```bash
 curl -fsSL https://aka.ms/install-fstar | bash -s -- --nightly
 ```
 
-As a last resort, one can also build it from source using the `sourcebuild` skill,
-which also sets up the required Z3 versions and OCaml toolchain.
+For building from source, use the `sourcebuild` skill. The installation includes `fstar.exe`, pre-built F*/Pulse libraries, and `krml` for C extraction.
 
-### Contents
- 
-The default installation of fstar.exe includes 
+Pulse files use `#lang-pulse` at the top and `open Pulse.Lib.Pervasives`; `fstar.exe` handles this natively — no `--ext pulse` needed.
 
-* `fstar.exe` The F* compiler itself
-* Pre-built standard libraries for F* and Pulse
-* **KaRaMeL** for C extraction, available at the same path as fstar.exe as `krml`
+Use the `fstarverifier` skill for verification commands, diagnostic flags, and error interpretation.
 
-See the `sourcebuild` skill for setup details and the `krmlextraction` skill for C extraction.
+## Searching the Library
 
-### Verification Commands
-
-```bash
-# Verify a file (Pulse support is built into fstar.exe)
-fstar.exe Module.fst
-
-# With project include paths
-fstar.exe --include path/to/spec --include path/to/impl Module.fst
-
-# With diagnostics
-fstar.exe --query_stats --split_queries always Module.fst
-
-# Print full names to debug symbol confusion
-fstar.exe --print_full_names --print_implicits Module.fst
-```
-
-Pulse files use `#lang-pulse` at the top and `open Pulse.Lib.Pervasives`.
-`fstar.exe` handles `#lang-pulse` natively — no `--ext pulse` needed.
-
-## Searching the Library and Examples
-
-Before writing code from scratch, search the F* and Pulse sources for reusable patterns,
-library functions, and examples of similar problems.
-
-### Key Source Locations (relative to FSTAR_HOME)
-
-| Path | Contents |
-|------|----------|
-| `ulib/` | F* standard library sources (FStar.Seq, FStar.UInt64, etc.) |
-| `pulse/lib/pulse/lib/` | Pulse library (Pulse.Lib.Array, Pulse.Lib.Reference, etc.) |
-| `pulse/lib/pulse/core/` | PulseCore (low-level separation logic primitives) |
-| `pulse/test/` | Pulse test cases and examples |
-| `tests/` | F* test suite (many small verification examples) |
-
-### How to Search
-
-```bash
-# Find a function or type definition
-grep -rn 'val my_function\|let my_function' ulib/ pulse/lib/
-
-# Find usage examples of a library function
-grep -rn 'Array.pts_to\|A.pts_to' pulse/test/ --include='*.fst'
-
-# Find Pulse examples with loops
-grep -rn 'while\|invariant' pulse/test/ --include='*.fst'
-
-# Find how a specific pattern is used (e.g., fold/unfold)
-grep -rn 'fold.*on_range\|unfold.*on_range' pulse/ --include='*.fst'
-
-# Search for extraction-related patterns
-grep -rn 'inline_for_extraction' ulib/ --include='*.fsti' | head -20
-```
-
-### When to Search
-
-- **Before defining a type**: Check if F* ulib already has it (e.g., `FStar.Option`,
-  `FStar.Either`, `FStar.Seq.Properties`)
-- **Before writing a lemma**: Search ulib for existing proofs (e.g., `FStar.Math.Lemmas`,
-  `FStar.Seq.Properties`, `FStar.BitVector`)
-- **When stuck on a Pulse pattern**: Look at `pulse/test/` for working examples of
-  similar code (arrays, references, loops, locks)
-- **For extraction patterns**: Check `pulse/test/` for `--codegen krml` examples
+Before writing code from scratch, search the F* standard library (`ulib/`) and Pulse tests (`pulse/test/`) for reusable patterns, library functions, and examples. Locate the root with `fstar.exe --locate_lib`, then `grep -rn` for function definitions and usage examples. Always search before defining types, writing lemmas, or tackling patterns you've seen before — `FStar.Math.Lemmas`, `FStar.Seq.Properties`, and `FStar.BitVector` have many existing proofs.
 
 ## Core Competencies
 
@@ -442,79 +365,26 @@ assert (pure (SZ.fits (SZ.v x + 1)));       // therefore x+1 fits
 let y = x `SZ.add` 1sz;                     // Now this works
 ```
 
-## Extraction-Ready Code
+## Extraction to C
 
-For code that will be extracted to C via KaRaMeL:
+For extractable code: use `UInt64.t`, `UInt32.t`, `UInt16.t`, `UInt8.t`, `SizeT.t`, `bool`; avoid `int`, `nat`, `list`, `string`, `Seq.seq`. Ghost/erased types vanish at extraction; `Lemma` return type produces zero C code.
 
-### Type Rules
-- **Use**: `UInt64.t`, `UInt32.t`, `UInt16.t`, `UInt8.t`, `SizeT.t`, `bool`
-- **Do not use** in extractable code: `int`, `nat`, `list`, `string`, `Seq.seq`
-- **Ghost/erased**: Unbounded types are fine behind `Ghost.erased` — they vanish at extraction
-- **Lemmas**: `Lemma` return type produces zero C code — use freely
+Use the `krmlextraction` skill for bundle syntax, `krml` flags, and extraction troubleshooting. Use the `projectsetup` skill for Makefile templates.
 
-### Module Structure for Bundle Extraction
-```
-# Modules listed in the API bundle are public in the C header
-# Modules listed only in patterns become static (internal)
-# Modules in the hide-bundle produce no C output at all
-```
-
-See the `krmlextraction` skill for bundle syntax and extraction workflow.
-
-## Debugging Strategies
-
-### Proof Isolation
-```fstar
-let complex_proof () : Lemma (...) =
-  step1;
-  assert (fact1);    // Does this pass?
-  admit();           // Temporarily cut here
-  step2;             // Then move admit() down
-  assert (fact2);
-```
-
-Factor the failing part into a helper lemma in a separate (possibly non-Pulse) module.
-
-### Pulse-Specific Issues
-
-**"Application of stateful computation cannot have ghost effect"**
-- You're inside a ghost context (e.g., conditional on ghost value)
-- Read from actual data structures, not ghost witnesses
-
-**Mysterious proof failures in Pulse**
-- Before assuming a tool limitation, check for mundane bugs first:
-  copy-paste errors, wrong module qualifiers, mismatched symbols.
-- Use `--print_full_names --print_implicits` to verify you're referencing the
-  correct definition. A function from the wrong module may have similar but
-  subtly different types, causing Z3 to fail silently.
-- If a lemma call fails in Pulse, try calling it in a pure F* test to confirm
-  the lemma itself works. If it works there, the issue is in how you're
-  calling it, not in Pulse.
+## Debugging
 
 ### CRITICAL: Never Escalate rlimit as First Response
 
 When a proof fails or times out:
 1. FIRST: Use `--query_stats --split_queries always` to find the failing query
 2. SECOND: Factor into smaller lemmas, add intermediate assertions
-3. THIRD: Use the smtprofiling skill to diagnose quantifier cascades
+3. THIRD: Use the `smtprofiling` skill to diagnose quantifier cascades
 4. FOURTH: Try `--fuel 0 --ifuel 0` with explicit lemma calls
 5. LAST RESORT: Increase rlimit only after all above fail, and only minimally
 
-```fstar
-// Target: rlimit ≤ 10 everywhere
-// If a proof needs high rlimit, refactor:
-// 1. Factor into smaller lemmas
-// 2. Add intermediate assertions
-// 3. Reduce fuel: --fuel 0 --ifuel 0
-// 4. Add explicit type annotations
-// 5. Use {:pattern ...} on quantifiers
-// 6. For NL arithmetic: disable smt.arith.nl and use calc proofs
-```
+Target rlimit ≤ 10 everywhere. If a proof needs high rlimit, refactor — don't increase the limit.
 
-### Diagnosing with query_stats
-```bash
-fstar.exe --query_stats --split_queries always Module.fst 2>&1 | grep -E 'cancelled|failed|rlimit'
-```
+Use the `proofdebugging` skill for systematic workflows: proof isolation with `admit()`, Pulse-specific issues, root causes, and anti-patterns.
 
 ## Hard-Won Lessons
 
