@@ -1,0 +1,28 @@
+name: skills-sync-check
+
+on:
+  push:
+    paths:
+      - 'skills/**'
+      - 'plugins/proof-copilot/skills/**'
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'plugins/proof-copilot/skills/**'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify skills/ matches plugins/proof-copilot/skills/
+        run: |
+          if ! diff -r skills plugins/proof-copilot/skills; then
+            echo ""
+            echo "ERROR: skills/ and plugins/proof-copilot/skills/ have diverged."
+            echo "These two trees must stay identical (the plugin copy is required"
+            echo "because Claude Code plugins must be self-contained)."
+            echo "Sync them with:"
+            echo "  rm -rf plugins/proof-copilot/skills && cp -R skills plugins/proof-copilot/skills"
+            exit 1
+          fi

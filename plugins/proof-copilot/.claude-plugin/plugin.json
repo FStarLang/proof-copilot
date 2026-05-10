@@ -5,7 +5,5 @@
   "author": { "name": "FStarLang" },
   "license": "Apache-2.0",
   "keywords": ["fstar", "verification", "proof", "formal-methods"],
-  "repository": "https://github.com/FStarLang/proof-copilot",
-  "agents": "../agents/",
-  "skills": "../../../skills/"
+  "repository": "https://github.com/FStarLang/proof-copilot"
 }
