@@ -14,7 +14,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verify skills/ matches plugins/proof-copilot/skills/
         run: |
           if ! diff -r skills plugins/proof-copilot/skills; then
