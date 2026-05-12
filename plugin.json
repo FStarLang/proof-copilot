@@ -6,6 +6,6 @@
   "license": "Apache-2.0",
   "keywords": ["fstar", "verification", "proof", "formal-methods"],
   "repository": "https://github.com/FStarLang/proof-copilot",
-  "agents": "plugins/proof-copilot/agents/",
-  "skills": "plugins/proof-copilot/skills/"
+  "agents": "out/copilot/plugins/proof-copilot/agents/",
+  "skills": "out/copilot/plugins/proof-copilot/skills/"
 }

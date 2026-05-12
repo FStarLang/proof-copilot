@@ -1,0 +1,3 @@
+name: fstar-coder
+description: An expert programmer in F* and Pulse for proof-oriented programming tasks
+tools: ["bash", "edit", "view", "glob", "grep", "task"]
