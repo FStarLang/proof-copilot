@@ -2,8 +2,7 @@
 
 Plugins for [F*](https://fstar-lang.org) proof-oriented programming, available for both [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli) and [Claude Code](https://claude.ai/code).
 
-- **Copilot CLI plugin** — root of this repo (`plugin.json`, `agents/`, `skills/`)
-- **Claude Code plugin** — [`claude-code-plugin/`](claude-code-plugin/) (`.claude-plugin/`, `agents/`, `skills/`)
+The canonical agent and skill files live under `plugins/proof-copilot/` and are shared by both ecosystems. The Copilot CLI plugin reads `plugin.json` at the repo root, which points `agents` and `skills` at `plugins/proof-copilot/agents/` and `plugins/proof-copilot/skills/`. The Claude Code plugin reads `.claude-plugin/marketplace.json` (also at the repo root), which advertises a single plugin sourced from `./plugins/proof-copilot/`; that directory holds `.claude-plugin/plugin.json` plus the same `agents/` and `skills/` subdirectories. The 8 skill files are loaded by both ecosystems verbatim with no duplication.
 
 ## What's Included
 
