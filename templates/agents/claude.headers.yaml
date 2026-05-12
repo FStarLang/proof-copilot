@@ -1,0 +1,4 @@
+name: fstar-coder
+description: An expert programmer in F* and Pulse for proof-oriented programming tasks
+model: opus
+tools: Bash, Read, Edit, Write, Glob, Grep, Agent

@@ -11,7 +11,7 @@
     {
       "name": "proof-copilot",
       "description": "F* proof-oriented programming agent and verification skills for Claude Code",
-      "source": "./plugins/proof-copilot",
+      "source": "./out/claude/plugins/proof-copilot",
       "category": "development"
     }
   ]
